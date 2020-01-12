@@ -100,7 +100,6 @@ mod tests {
     fn data_loading() {
         let mut dataset = Dataset::new();
         dataset.load_data("data/banknote_train.csv");
-        //dataset.print();
         assert_eq!(dataset.cols, 5);
         assert_eq!(dataset.rows, 1097);
         assert_eq!(dataset.data.len(), 1097);
@@ -116,8 +115,8 @@ mod tests {
         for i in 0..2 {
             count = 0;
             for m in dataset.iter() {
-                print!("{}: ", i + 1);
-                m.print();
+                //print!("{}: ", i + 1);
+                //m.print();
                 count += 1;
             }
             assert_eq!(count, 1097);

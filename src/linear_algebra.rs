@@ -1,12 +1,6 @@
 /// A structure representing a two-dimensional coordinate
 pub struct Coord(usize, usize);
 
-/// An enum representing an optional matrix of gradients
-pub enum GradMatrix {
-    Some(Matrix),
-    None,
-}
-
 /// A structure representing a matrix
 pub struct Matrix {
     /// The number of rows in the matrix
@@ -16,7 +10,7 @@ pub struct Matrix {
     /// The data contained in the matrix
     data: Vec<f64>,
     /// An optional matrix of gradients
-    pub grad: Box<GradMatrix>,
+    pub grad: Option<Box<Matrix>>,
 }
 
 impl Matrix {
@@ -29,7 +23,7 @@ impl Matrix {
             // set data to zeroes
             data: vec![0.0; rows * cols],
             // set grad to None
-            grad: Box::new(GradMatrix::None),
+            grad: None,
         }
     }
 
@@ -42,7 +36,17 @@ impl Matrix {
             rows,
             cols,
             data,
-            grad: Box::new(GradMatrix::None),
+            grad: None,
+        }
+    }
+
+    /// Returns a clone of the current matrix, excluding its gradients
+    pub fn clone(&self) -> Matrix {
+        Matrix {
+            rows: self.rows,
+            cols: self.cols,
+            data: self.data.clone(),
+            grad: None,
         }
     }
 
@@ -86,17 +90,35 @@ impl Matrix {
         self.data[index] += val;
     }
 
+    /// Returns a reference to the data vector
+    pub fn get_data(&self) -> &Vec<f64> {
+        &self.data
+    }
+
+    /// Initializes the optional matrix of gradients
+    pub fn init_grad(&mut self) {
+        self.grad = Some(Box::new(Matrix::new(self.rows, self.cols)));
+    }
+
+    /// Returns a reference to the matrix of gradients, if present
+    pub fn get_grad(&self) -> &Matrix {
+        match &self.grad {
+            Some(grad_ptr) => &*grad_ptr,
+            None => panic!("No gradients set"),
+        }
+    }
+
+    /// Sets the matrix of gradients to the given matrix
+    pub fn set_grad(&mut self, grads: &Matrix) {
+        self.grad = Some(Box::new(grads.clone()));
+    }
+
     /// Displays the matrix for testing and debugging purposes
     pub fn print(&self) {
         for i in self.data.iter() {
             print!("{} ", i);
         }
         print!("\n");
-    }
-
-    /// Initializes the optional matrix of gradients
-    pub fn init_grad(&mut self) {
-        self.grad = Box::new(GradMatrix::Some(Matrix::new(self.rows, self.cols)));
     }
 
     /// Return the matrix which is the result of adding the given matrix
@@ -149,6 +171,14 @@ impl Matrix {
             }
         }
         matrix
+    }
+
+    /// Multiplies each gradient by the given learning rate and
+    /// adds this value to the corresponding data element
+    pub fn gd_step(&mut self, lr: f64) {
+        for i in 0..self.data.len() {
+            self.data[i] += self.get_grad().get_data()[i] * lr;
+        }
     }
 
     // panic if the given coordinate is invalid for the current matrix
@@ -312,9 +342,19 @@ mod tests {
     fn initialize_gradients() {
         let mut matrix = Matrix::new(2, 3);
         matrix.init_grad();
-        match *matrix.grad {
-            GradMatrix::Some(grad_matrix) => assert_eq!(grad_matrix.data, vec![0.; 6]),
-            GradMatrix::None => panic!("Gradients have not been set"),
+        match matrix.grad {
+            Some(grad_matrix) => assert_eq!(grad_matrix.data, vec![0.; 6]),
+            None => panic!("Gradients have not been set"),
         }
+    }
+
+    // test updating of elements by gradient descent
+    #[test]
+    fn gradient_descent() {
+        let mut matrix = Matrix::new(2, 3);
+        matrix.init_grad();
+        matrix.set_grad(&Matrix::from_vec(2, 3, vec![1.; 6]));
+        matrix.gd_step(-0.01);
+        assert_eq!(matrix.get_data(), &vec![-0.01; 6]);
     }
 }
