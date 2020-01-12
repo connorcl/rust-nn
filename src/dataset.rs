@@ -1,14 +1,19 @@
 use std::fs;
 use crate::linear_algebra::Matrix;
 
+pub struct Row {
+    x: Matrix,
+    y: f64,
+}
+
 /// A structure representing a training or validation dataset
 pub struct Dataset {
     /// The number of rows in the dataset
     rows: usize,
-    /// The number of columns in the dataset
-    cols: usize,
+    /// The number of independent variables in the dataset
+    x_vars: usize,
     /// The rows of the dataset
-    data: Vec<Matrix>,
+    data: Vec<Row>,
 }
 
 impl Dataset {
@@ -16,7 +21,7 @@ impl Dataset {
     pub fn new() -> Dataset {
         Dataset {
             rows: 0,
-            cols: 0,
+            x_vars: 0,
             data: Vec::new(),
         }
     }
@@ -26,24 +31,30 @@ impl Dataset {
         // read data from file
         let contents = fs::read_to_string(filename)
             .expect("Reading file failed");
-        // create variable for each row of data
-        let mut row: Vec<f64>;
+        // create variables for each row of data
+        let mut x: Vec<f64>;
+        let mut y: f64;
         // parse and save each row of the dataset
         for line in contents.lines() {
-            row = line.split(",").map(|field| {
+            x = line.split(",").map(|field| {
                 field.parse::<f64>().unwrap()
             }).collect();
-            self.data.push(Matrix::from_vec(1, row.len(), row));
+            y = x.pop().unwrap();
+            self.data.push(Row { 
+                x: Matrix::from_vec(1, x.len(), x),
+                y,
+            });
         }
-        // set number of rows and cols
+        // set number of rows and x_vars
         self.rows = self.data.len();
-        self.cols = self.data[0].get_cols();
+        self.x_vars = self.data[0].x.get_cols();
     }
 
     /// Prints the dataset for testing and debugging purposes
     pub fn print(&self) {
         for m in self.data.iter() {
-            m.print();
+            m.x.print();
+            print!("{}", m.y);
         }
     }
 
@@ -53,7 +64,7 @@ impl Dataset {
     }
 
     /// Returns a reference to the given row
-    pub fn get_at(&self, index: usize) -> &Matrix {
+    pub fn get_at(&self, index: usize) -> &Row {
         &self.data[index]
     }
 
@@ -78,7 +89,7 @@ impl<'a> DatasetIterator<'a> {
 }
 
 impl<'a> Iterator for DatasetIterator<'a> {
-    type Item = &'a Matrix;
+    type Item = &'a Row;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
@@ -100,7 +111,7 @@ mod tests {
     fn data_loading() {
         let mut dataset = Dataset::new();
         dataset.load_data("data/banknote_train.csv");
-        assert_eq!(dataset.cols, 5);
+        assert_eq!(dataset.x_vars, 4);
         assert_eq!(dataset.rows, 1097);
         assert_eq!(dataset.data.len(), 1097);
     }
