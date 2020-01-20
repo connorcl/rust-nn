@@ -1,9 +1,10 @@
 use std::fs;
 use crate::linear_algebra::Matrix;
 
+/// Represents a dataset row which includes a single dependent variable
 pub struct Row {
-    x: Matrix,
-    y: f64,
+    pub x: Matrix,
+    pub y: f64,
 }
 
 /// A structure representing a training or validation dataset
@@ -50,17 +51,14 @@ impl Dataset {
         self.x_vars = self.data[0].x.get_cols();
     }
 
-    /// Prints the dataset for testing and debugging purposes
-    pub fn print(&self) {
-        for m in self.data.iter() {
-            m.x.print();
-            print!("{}", m.y);
-        }
-    }
-
     /// Returns the length of the dataset
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+
+    /// Returns the number of independent variables in the dataset
+    pub fn get_x_vars(&self) -> usize {
+        self.x_vars
     }
 
     /// Returns a reference to the given row
@@ -72,15 +70,25 @@ impl Dataset {
     pub fn iter(&mut self) -> DatasetIterator {
         DatasetIterator::new(self)
     }
+
+    /// Prints the dataset for testing and debugging purposes
+    pub fn print(&self) {
+        for m in self.data.iter() {
+            m.x.print();
+            print!("{}", m.y);
+        }
+    }
 }
 
+/// An iterator over a dataset
 pub struct DatasetIterator<'a> {
     dataset: &'a Dataset,
     index: usize,
 }
 
 impl<'a> DatasetIterator<'a> {
-    fn new(dataset: &mut Dataset) -> DatasetIterator {
+    /// Creates and returns a new dataset iterator for the given dataset
+    fn new(dataset: &Dataset) -> DatasetIterator {
         DatasetIterator {
             dataset,
             index: 0,
@@ -89,14 +97,20 @@ impl<'a> DatasetIterator<'a> {
 }
 
 impl<'a> Iterator for DatasetIterator<'a> {
+    // type is immutable reference to a row
     type Item = &'a Row;
 
+    /// Returns the next item if it exists
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
+        // if index is valid
         if self.index < self.dataset.len() {
+            // result is reference to row at that index
             result = Some(self.dataset.get_at(self.index));
         }
+        // increment index
         self.index += 1;
+        // return item
         result
     }
 }
