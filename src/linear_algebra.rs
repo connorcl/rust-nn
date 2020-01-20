@@ -1,5 +1,5 @@
 /// A structure representing a two-dimensional coordinate
-pub struct Coord(usize, usize);
+pub struct Coord(pub usize, pub usize);
 
 /// A structure representing a matrix
 pub struct Matrix {
@@ -148,8 +148,8 @@ impl Matrix {
         let mut x: f64;
         // perform matrix multiplication
         for i in 0..self.rows {
-            for j in 0..other.cols {
-                for k in 0..self.cols {
+            for k in 0..self.cols {
+                for j in 0..other.cols {
                     x = self.get_at(&Coord(i, k)) * 
                         other.get_at(&Coord(k, j));
                     matrix.increment_at(&Coord(i, j), x);

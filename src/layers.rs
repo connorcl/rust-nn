@@ -1,4 +1,5 @@
 use crate::linear_algebra::Matrix;
+use crate::linear_algebra::Coord;
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Normal, Distribution};
 
@@ -32,7 +33,7 @@ impl Linear {
         // set up matrix data
         let mut data: Vec<f64> = vec![0.; inputs * units];
         // set each element to a random number drawn from a normal
-        // distrubution with a mean of 0 and a sd of 2 / rows
+        // distrubution with a mean of 0 and a sd of 2 / inputs
         for i in 0..data.len() {
             data[i] = normal.sample(&mut rng);
         }
@@ -66,7 +67,7 @@ impl Layer for Linear {
     }
 }
 
-impl TrainableLayer for Linear {
+impl Trainable for Linear {
     /// Updates the weights and biases based on their gradients and
     /// the given learning rate
     fn update(&mut self, lr: f64) {
@@ -77,9 +78,90 @@ impl TrainableLayer for Linear {
 
 pub struct ReLU();
 
+impl Layer for ReLU {
+    /// Returns the input matrix with each element clamped at min 0
+    fn forward(&self, inputs: &Matrix) -> Matrix {
+        // clone data from input
+        let mut outputs = inputs.get_data().clone();
+        // set items to 0 if negative
+        for i in 0..outputs.len() {
+            if outputs[i] < 0. {
+                outputs[i] = 0.
+            }
+        }
+        // create and return new matrix from vector
+        Matrix::from_vec(inputs.get_rows(), inputs.get_cols(), outputs)
+    }
+
+    /// Returns the gradients of the inputs
+    fn backward(&mut self, inputs: &Matrix, outputs: &Matrix) -> Matrix {
+        // clone input data
+        let mut input_grads = outputs.get_data().clone();
+        // gradient of input is gradient of corresponding output if input
+        // is positive, otherwise 0
+        for i in 0..input_grads.len() {
+            if input_grads[i] > 0. {
+                input_grads[i] = outputs.get_grad().get_data()[i];
+            }
+        }
+        // create and return new matrix from vector
+        Matrix::from_vec(inputs.get_rows(), inputs.get_cols(), input_grads)
+    }
+}
+
 pub struct Sigmoid();
 
-pub struct MSELoss();
+impl Sigmoid {
+    /// Returns the output of the sigmoid function for the given input
+    fn sigmoid(x: f64) -> f64 {
+        1. / (1. + (-x).exp())
+    }
+}
+
+impl Layer for Sigmoid {
+     /// Returns the result of passing each element through the sigmoid function
+     fn forward(&self, inputs: &Matrix) -> Matrix {
+        let mut outputs = inputs.get_data().clone();
+        // apply sigmoid function to each element
+        for i in 0..outputs.len() {
+            outputs[i] = Sigmoid::sigmoid(outputs[i]);
+        }
+        // create and return new matrix
+        Matrix::from_vec(inputs.get_rows(), inputs.get_cols(), outputs)
+    }
+
+    /// Returns the gradients of the inputs
+    fn backward(&mut self, inputs: &Matrix, outputs: &Matrix) -> Matrix {
+        let mut input_grads = inputs.get_data().clone();
+        let mut current_elem: f64;
+        // gradient is derivative of sigmoid * gradient of output
+        for i in 0..input_grads.len() {
+            current_elem = input_grads[i];
+            input_grads[i] = Sigmoid::sigmoid(current_elem) * 
+                (1. - Sigmoid::sigmoid(current_elem)) *
+                outputs.get_grad().get_data()[i];
+        }
+        // create and return new matrix
+        Matrix::from_vec(inputs.get_rows(), inputs.get_cols(), input_grads)
+    }
+}
+
+pub struct BinarySELoss();
+
+impl BinarySELoss {
+    /// Returns the result of passing the input through the layer
+    pub fn forward(&self, input: &Matrix, target: f64) -> f64 {
+        let input_item = input.get_data()[0];
+        (input_item - target).powi(2)
+    }
+
+    /// Returns the gradients of the inputs
+    pub fn backward(&mut self, output: f64) -> Matrix {
+        let mut result = Matrix::new(1, 1);
+        result.set_at(&Coord(0, 0), 2. * output);
+        result
+    }
+}
 
 /// Forward pass and backward pass methods associated with
 /// a layer of an artificial neural network
@@ -91,8 +173,8 @@ pub trait Layer {
     fn backward(&mut self, inputs: &Matrix, outputs: &Matrix) -> Matrix;
 }
 
-/// Update method to update the parameters of a trainable neural network layer
-pub trait TrainableLayer {
+/// Method to update the internal parameters of a trainable layer
+pub trait Trainable {
     /// Updates the layer's parameters
     fn update(&mut self, lr: f64);
 }
