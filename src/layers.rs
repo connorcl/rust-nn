@@ -156,7 +156,7 @@ impl BinarySELoss {
     }
 
     /// Returns the gradients of the inputs
-    pub fn backward(&mut self, output: f64) -> Matrix {
+    pub fn backward(&self, output: f64) -> Matrix {
         let mut result = Matrix::new(1, 1);
         result.set_at(&Coord(0, 0), 2. * output);
         result

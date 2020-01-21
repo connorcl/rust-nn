@@ -67,8 +67,8 @@ impl Dataset {
     }
 
     /// Returns an iterator over the dataset
-    pub fn iter(&mut self) -> DatasetIterator {
-        DatasetIterator::new(self)
+    pub fn iter(&self) -> DatasetIterator {
+        DatasetIterator::new(&self)
     }
 
     /// Prints the dataset for testing and debugging purposes
